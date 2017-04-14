@@ -199,3 +199,9 @@ func GetAlongLine(p1 engo.Point, p2 engo.Point, d float32) engo.Point {
 	//fmt.Printf("%0.2f from (%0.2f, %0.2f) towards (%0.2f, %0.2f) is (%0.2f, %0.2f)\n", d, p1.X, p1.Y, p2.X, p2.Y, m, n)
 	return engo.Point{m, n}
 }
+
+type FoodNode struct {
+	ecs.BasicEntity
+	common.SpaceComponent
+	common.RenderComponent
+}

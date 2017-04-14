@@ -6,11 +6,11 @@ import System.IO
 
 main :: IO()
 main = do
-    putStrLn "Started Server..."
+    putStrLn "Started Server and Listing on Port: 7479..."
     sock <- socket AF_INET Stream 0
     setSocketOption sock ReuseAddr 1
     bind sock $ SockAddrInet 7479 iNADDR_ANY
-    listen sock 2
+    listen sock 10
     mainLoop sock
 
 mainLoop :: Socket -> IO()
@@ -25,9 +25,17 @@ connHandler (sock, _) = do
     putStrLn "Starting Handler"
     handle <- socketToHandle sock ReadWriteMode
     hSetBuffering handle LineBuffering
-    hPutStrLn handle "Hello Client!"
+    -- hPutStrLn handle "Hello Client!"
+    handleLoop handle
+
+handleLoop :: Handle -> IO()
+handleLoop handle = do
     putStrLn "Waiting for Input"
     msg <- hGetLine handle
     putStrLn "Got Input: "
     putStrLn msg
-    hClose handle
+    if msg == "QUIT" 
+        then do
+            hClose handle 
+        else do
+            handleLoop handle

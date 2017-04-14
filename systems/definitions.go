@@ -20,6 +20,7 @@ type ActiveSystemsStruct struct {
 
 var (
 	BackgroundImage = "background.png"
+	FoodSprite      = "food.png"
 )
 
 // Other Variables
@@ -95,6 +96,10 @@ func InitializeVariables() {
 			}
 			ActiveSystems.RenderSys.Add(&bc, &rc, &sc)
 		}
+	}
+
+	for i := 0; i < 1000; i++ {
+
 	}
 
 	fmt.Println("Initialized variables")
