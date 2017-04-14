@@ -14,7 +14,6 @@ import (
 
 var (
 	ServerAddr string
-	Connection net.Conn
 )
 
 type myScene struct{}
@@ -55,11 +54,12 @@ func main() {
 	}
 
 	fmt.Print("Enter Server IP (host:port) : ")
-	fmt.Scanln(&ServerAddr)
+	//fmt.Scanln(&ServerAddr)
+	ServerAddr = "127.0.0.1:7479"
 	fmt.Println("Trying to connect to Server @", ServerAddr, "...")
 
 	con, err := net.Dial("tcp", ServerAddr)
-	Connection = con
+	systems.Connection = con
 	if err != nil {
 		fmt.Println("Failed to connect to server @ ", ServerAddr)
 		panic(err)
@@ -69,8 +69,7 @@ func main() {
 
 	engo.Run(opts, new(myScene))
 	fmt.Println("Done Running")
-	Connection.Write([]byte("NOQUIT\n"))
-	Connection.Write([]byte("QUIT\n"))
-	Connection.Close()
+	systems.Connection.Write([]byte("QUIT\n"))
+	systems.Connection.Close()
 	fmt.Println("Disconnected with server")
 }

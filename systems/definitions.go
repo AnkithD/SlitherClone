@@ -5,6 +5,7 @@ import (
 	"engo.io/engo"
 	"engo.io/engo/common"
 	"fmt"
+	"net"
 )
 
 // Button mappings
@@ -27,6 +28,7 @@ var (
 var (
 	ActiveSystems ActiveSystemsStruct
 	WorldBounds   engo.AABB
+	Connection    net.Conn
 )
 
 // Functions
@@ -103,4 +105,33 @@ func InitializeVariables() {
 	}
 
 	fmt.Println("Initialized variables")
+}
+
+func ReadFromServer() string {
+	ReadBuffer := make([]byte, 1024)
+	num, err := Connection.Read(ReadBuffer)
+	if err != nil {
+		fmt.Print("Error reading from server, ERR:")
+		panic(err)
+	}
+	StringBuffer := string(ReadBuffer[:num])
+	for StringBuffer[len(StringBuffer)-1] == '\n' {
+		StringBuffer = StringBuffer[:len(StringBuffer)-1]
+	}
+	fmt.Println("Read", StringBuffer)
+
+	return StringBuffer
+}
+
+func WriteToServer(msg string) {
+	if msg[len(msg)-1] != '\n' {
+		msg += "\n"
+	}
+	fmt.Println("Writing", msg)
+	num, err := Connection.Write([]byte(msg))
+	fmt.Println("Return of Write is", num, "length of msg is", len(msg))
+	if err != nil {
+		fmt.Print("Error writing to server, ERR:")
+		panic(err)
+	}
 }

@@ -8,7 +8,10 @@ import (
 	"image/color"
 	"math"
 	"math/rand"
-	//"time"
+	//"net"
+	"strconv"
+	"strings"
+	"time"
 )
 
 type SlitherSystem struct {
@@ -22,7 +25,7 @@ type SlitherSystem struct {
 func (ss *SlitherSystem) Remove(ecs.BasicEntity) {}
 func (ss *SlitherSystem) New(w *ecs.World) {
 	//rand.Seed(time.Now().Unix())
-	rand.Seed(14042017)
+	rand.Seed(time.Now().Unix())
 	ss.world = w
 	ss.BaseColors = []color.RGBA{
 		color.RGBA{220, 20, 60, 255},
@@ -46,10 +49,16 @@ func (ss *SlitherSystem) New(w *ecs.World) {
 		Body:       make([]*SlitherNode, 0),
 		MoveSpeed:  200,
 	}
+
+	rand_x := rand.Int() % (int(WorldBounds.Max.X - 200))
+	rand_x += 100
+	rand_y := rand.Int() % (int(WorldBounds.Max.Y - 200))
+	rand_y += 100
+
 	tempnode := &SlitherNode{
 		BasicEntity: ecs.NewBasic(),
 		SpaceComponent: common.SpaceComponent{
-			Position: engo.Point{640, 384},
+			Position: engo.Point{float32(rand_x), float32(rand_y)},
 			Width:    ss.Player.NodeRadius * 2,
 			Height:   ss.Player.NodeRadius * 2,
 		},
@@ -66,7 +75,7 @@ func (ss *SlitherSystem) New(w *ecs.World) {
 		&(ss.Player.Body[0].RenderComponent),
 		&(ss.Player.Body[0].SpaceComponent),
 	)
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 5; i++ {
 		ss.Elongate(ss.Player)
 	}
 	ss.world.AddSystem(&common.EntityScroller{
@@ -74,13 +83,66 @@ func (ss *SlitherSystem) New(w *ecs.World) {
 		TrackingBounds: WorldBounds,
 	})
 
+	InitMsg := "0|"
+	tempx := strconv.FormatFloat(float64(rand_x), 'f', 2, 32)
+	tempy := strconv.FormatFloat(float64(rand_y), 'f', 2, 32)
+	InitMsg += tempx + "|" + tempy + "|"
+	tempcol := ss.Player.BaseColor
+	InitMsg += strconv.Itoa(int(tempcol.R)) + "|" + strconv.Itoa(int(tempcol.G)) + "|" + strconv.Itoa(int(tempcol.B))
+	WriteToServer(InitMsg)
+
+	StringBuffer := ReadFromServer()
+	var EnemyBaseColor color.RGBA
+	var EnemyPos engo.Point
+	msg := strings.Split(StringBuffer, "|")
+	fmt.Println("Splitted: ", msg)
+	if msg[0] == "0" {
+		x, e1 := strconv.ParseFloat(msg[1], 32)
+		y, e2 := strconv.ParseFloat(msg[2], 32)
+		r, e3 := strconv.Atoi(msg[3])
+		g, e4 := strconv.Atoi(msg[4])
+		b, e5 := strconv.Atoi(msg[5])
+		if e1 != nil || e2 != nil || e3 != nil || e4 != nil || e5 != nil {
+			panic("Error parsing Init packet")
+		}
+		EnemyPos = engo.Point{float32(x), float32(y)}
+		EnemyBaseColor = color.RGBA{uint8(r), uint8(g), uint8(b), 255}
+	} else {
+		fmt.Println("msg: ", msg)
+		panic("Expected init packet but did not get it")
+	}
+	ss.AddSlither(EnemyPos, EnemyBaseColor)
+
 	fmt.Println("Initialized Slither System")
 }
 func (ss *SlitherSystem) Update(dt float32) {
 	mx, my := GetAdjustedMousePos(false)
-
 	ss.Player.MoveTowards = engo.Point{mx, my}
+
+	UpdtMsg := "1|"
+	tempx := strconv.FormatFloat(float64(mx), 'f', 2, 32)
+	tempy := strconv.FormatFloat(float64(my), 'f', 2, 32)
+	UpdtMsg += tempx + "|" + tempy
+	WriteToServer(UpdtMsg)
+
+	StringBuffer := ReadFromServer()
+	msg := strings.Split(StringBuffer, "|")
+
+	//fmt.Println("splitted: ", msg)
+	if msg[0] == "1" {
+		x, e1 := strconv.ParseFloat(msg[1], 32)
+		y, e2 := strconv.ParseFloat(msg[2], 32)
+		if e1 != nil || e2 != nil {
+			panic("Error parsing Update Packet")
+		}
+		ss.Slithers[0].MoveTowards = engo.Point{float32(x), float32(y)}
+	} else {
+		fmt.Println("msg: ", msg)
+		panic("Expected update packet but did not get it")
+	}
+
 	ss.Player.Move(dt)
+	ss.Slithers[0].Move(dt)
 }
 
 func (ss *SlitherSystem) AddSlither(pos engo.Point, col color.RGBA) {
@@ -112,6 +174,9 @@ func (ss *SlitherSystem) AddSlither(pos engo.Point, col color.RGBA) {
 		&tempSlither.Body[0].RenderComponent,
 		&tempSlither.Body[0].SpaceComponent,
 	)
+	for i := 0; i < 5; i++ {
+		ss.Elongate(tempSlither)
+	}
 
 	ss.Slithers = append(ss.Slithers, tempSlither)
 }
@@ -178,6 +243,14 @@ func (se *SlitherEntity) Move(dt float32) {
 		}
 	}
 }
+
+// func (se *SlitherEntity) Serialize() string {
+// 	r, g, b = se.BaseColor.R, se.BaseColor.G, se.BaseColor.B
+// 	result := string(r) + "|" + string(g) + "|" + string(b) + "|"
+// 	for i := 0; i < len(se.Body); i++ {
+
+// 	}
+// }
 
 func GetAlongLine(p1 engo.Point, p2 engo.Point, d float32) engo.Point {
 	X, Y := float64(p1.X), float64(p1.Y)
