@@ -16,14 +16,19 @@ type myScene struct{}
 func (*myScene) Type() string { return "myGame" }
 
 func (*myScene) Preload() {
-
+	err := engo.Files.Load(
+		"background.png",
+	)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (*myScene) Setup(world *ecs.World) {
 	world.AddSystem(&common.RenderSystem{})
 	systems.RegisterButtons()
-	systems.InitializeVariables()
 	systems.CacheActiveSystems(world)
+	systems.InitializeVariables()
 
 	world.AddSystem(&systems.SlitherSystem{})
 

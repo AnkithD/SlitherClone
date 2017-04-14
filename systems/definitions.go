@@ -18,11 +18,14 @@ type ActiveSystemsStruct struct {
 
 // File Names
 
-var ()
+var (
+	BackgroundImage = "background.png"
+)
 
 // Other Variables
 var (
 	ActiveSystems ActiveSystemsStruct
+	WorldBounds   engo.AABB
 )
 
 // Functions
@@ -71,5 +74,28 @@ func CacheActiveSystems(world *ecs.World) {
 }
 
 func InitializeVariables() {
+	WorldBounds = engo.AABB{Min: engo.Point{0, 0}, Max: engo.Point{5000, 5000}}
+	BackgroundTex, err := common.LoadedSprite(BackgroundImage)
+	if err != nil {
+		panic("Error making texture from background")
+	}
+
+	for i := 0; i < 10; i++ {
+		for j := 0; j < 10; j++ {
+			bc := ecs.NewBasic()
+			rc := common.RenderComponent{
+				Drawable: BackgroundTex,
+			}
+			rc.SetZIndex(0)
+			w, h := rc.Drawable.Width(), rc.Drawable.Height()
+			sc := common.SpaceComponent{
+				Position: engo.Point{float32(i) * w, float32(j) * h},
+				Width:    w,
+				Height:   h,
+			}
+			ActiveSystems.RenderSys.Add(&bc, &rc, &sc)
+		}
+	}
+
 	fmt.Println("Initialized variables")
 }
