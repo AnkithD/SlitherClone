@@ -5,7 +5,7 @@ import (
 	"math"
 )
 
-func GetAlongLine(p1 engo.Point, p2 engo.Point, d float32) engo.Point {
+func GetAlongLine(p1 engo.Point, p2 engo.Point, d float32) engo.Point { /* */
 	X, Y := float64(p1.X), float64(p1.Y)
 	x, y := float64(p2.X), float64(p2.Y)
 	var m, n float32
