@@ -17,6 +17,9 @@ intersect (Rectangle x1 y1 x2 y2) (Rectangle x3 y3 x4 y4)
        | y2 < y3 = False
        | otherwise = True
 
+coveringRect :: float -> float -> float -> Shape
+coveringRect x y r = x-r y-r x+r y+r 
+
 main :: IO()
 main = do
     putStrLn "Started Server and Listing on Port: 7479..."
