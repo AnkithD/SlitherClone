@@ -22,6 +22,7 @@ type SlitherSystem struct {
 	DefaultRadius float32
 	timer         float32
 	boost_timer   float32
+	lmb_pressed   bool
 }
 
 func (ss *SlitherSystem) Remove(ecs.BasicEntity) {}
@@ -44,6 +45,7 @@ func (ss *SlitherSystem) New(w *ecs.World) {
 	ss.DefaultRadius = 20
 	ss.timer = 1.0
 	ss.boost_timer = 0.5
+	ss.lmb_pressed = false
 
 	ss.Player = &SlitherEntity{
 		BaseColor:  ss.BaseColors[rand.Int()%(len(ss.BaseColors))],
@@ -121,6 +123,7 @@ func (ss *SlitherSystem) New(w *ecs.World) {
 func (ss *SlitherSystem) Update(dt float32) {
 	sendElongateMsg := false
 	sendChopMsg := false
+	boosting := false
 	ss.timer -= dt
 	if ss.timer < 0 {
 		ss.Elongate(ss.Player)
@@ -128,19 +131,36 @@ func (ss *SlitherSystem) Update(dt float32) {
 		sendElongateMsg = true
 	}
 
-	if engo.Input.Mouse.Action == engo.Press && engo.Input.Mouse.Button == engo.MouseButtonLeft &&
-		len(ss.Player.Body) > 3 {
-		ss.Player.MoveSpeed = 400
+	if engo.Input.Mouse.Action == engo.Press && engo.Input.Mouse.Button == engo.MouseButtonLeft {
+		ss.lmb_pressed = true
+	}
+	if engo.Input.Mouse.Action == engo.Release && engo.Input.Mouse.Button == engo.MouseButtonLeft {
+		ss.lmb_pressed = false
+	}
+
+	if ss.lmb_pressed == true && len(ss.Player.Body) > 4 {
 		ss.boost_timer -= dt
+		ss.timer += dt
+		ss.Player.MoveSpeed = 400
+		boosting = true
 	} else {
 		ss.Player.MoveSpeed = 200
+		boosting = false
 	}
 
 	if ss.boost_timer < 0 {
-		fmt.Println("Chop time")
 		ss.Chop(ss.Player)
-		ss.boost_timer = 0.5
+		ss.boost_timer = 0.2
 		sendChopMsg = true
+	}
+
+	for _, node := range ss.Slithers[0].Body {
+		if ss.Player.Body[0].SpaceComponent.Position.PointDistance(node.Position) <=
+			(ss.Player.NodeGap+ss.Slithers[0].NodeGap) && len(ss.Player.Body) > 2 {
+			ss.Chop(ss.Player)
+			sendChopMsg = true
+			break
+		}
 	}
 
 	mx, my := GetAdjustedMousePos(false)
@@ -156,6 +176,11 @@ func (ss *SlitherSystem) Update(dt float32) {
 		UpdtMsg += "false|"
 	}
 	if sendChopMsg {
+		UpdtMsg += "true|"
+	} else {
+		UpdtMsg += "false|"
+	}
+	if boosting {
 		UpdtMsg += "true"
 	} else {
 		UpdtMsg += "false"
@@ -178,6 +203,12 @@ func (ss *SlitherSystem) Update(dt float32) {
 		}
 		if msg[4] == "true" {
 			ss.Chop(ss.Slithers[0])
+		}
+
+		if msg[5] == "true" {
+			ss.Slithers[0].MoveSpeed = 400
+		} else {
+			ss.Slithers[0].MoveSpeed = 200
 		}
 	} else {
 		fmt.Println("msg: ", msg)
@@ -251,11 +282,11 @@ func (ss *SlitherSystem) Elongate(sl *SlitherEntity) {
 }
 
 func (ss *SlitherSystem) Chop(sl *SlitherEntity) {
-	fmt.Println("Chopping, before", len(sl.Body))
+	// fmt.Println("Chopping, before", len(sl.Body))
 	ActiveSystems.RenderSys.Remove(sl.Body[len(sl.Body)-1].BasicEntity)
 	sl.ColorCount -= 1
 	sl.Body = sl.Body[:len(sl.Body)-1]
-	fmt.Println("After", len(sl.Body))
+	// fmt.Println("After", len(sl.Body))
 }
 
 func (ss *SlitherSystem) GetShade(BaseCol color.RGBA, Count int) color.RGBA {
