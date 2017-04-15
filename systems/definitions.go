@@ -77,7 +77,7 @@ func CacheActiveSystems(world *ecs.World) {
 }
 
 func InitializeVariables() {
-	WorldBounds = engo.AABB{Min: engo.Point{0, 0}, Max: engo.Point{5000, 5000}}
+	WorldBounds = engo.AABB{Min: engo.Point{0, 0}, Max: engo.Point{2000, 2000}}
 	BackgroundTex, err := common.LoadedSprite(BackgroundImage)
 	if err != nil {
 		panic("Error making texture from background")
@@ -118,7 +118,7 @@ func ReadFromServer() string {
 	for StringBuffer[len(StringBuffer)-1] == '\n' {
 		StringBuffer = StringBuffer[:len(StringBuffer)-1]
 	}
-	fmt.Println("Read", StringBuffer)
+	//fmt.Println("Read", StringBuffer)
 
 	return StringBuffer
 }
@@ -127,9 +127,9 @@ func WriteToServer(msg string) {
 	if msg[len(msg)-1] != '\n' {
 		msg += "\n"
 	}
-	fmt.Println("Writing", msg)
-	num, err := Connection.Write([]byte(msg))
-	fmt.Println("Return of Write is", num, "length of msg is", len(msg))
+	//fmt.Println("Writing", msg)
+	_, err := Connection.Write([]byte(msg))
+	//fmt.Println("Return of Write is", num, "length of msg is", len(msg))
 	if err != nil {
 		fmt.Print("Error writing to server, ERR:")
 		panic(err)

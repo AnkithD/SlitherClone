@@ -20,6 +20,8 @@ type SlitherSystem struct {
 	Player        *SlitherEntity
 	BaseColors    []color.RGBA
 	DefaultRadius float32
+	timer         float32
+	boost_timer   float32
 }
 
 func (ss *SlitherSystem) Remove(ecs.BasicEntity) {}
@@ -40,6 +42,8 @@ func (ss *SlitherSystem) New(w *ecs.World) {
 		color.RGBA{255, 154, 0, 255},
 	}
 	ss.DefaultRadius = 20
+	ss.timer = 1.0
+	ss.boost_timer = 0.5
 
 	ss.Player = &SlitherEntity{
 		BaseColor:  ss.BaseColors[rand.Int()%(len(ss.BaseColors))],
@@ -95,7 +99,6 @@ func (ss *SlitherSystem) New(w *ecs.World) {
 	var EnemyBaseColor color.RGBA
 	var EnemyPos engo.Point
 	msg := strings.Split(StringBuffer, "|")
-	fmt.Println("Splitted: ", msg)
 	if msg[0] == "0" {
 		x, e1 := strconv.ParseFloat(msg[1], 32)
 		y, e2 := strconv.ParseFloat(msg[2], 32)
@@ -116,13 +119,47 @@ func (ss *SlitherSystem) New(w *ecs.World) {
 	fmt.Println("Initialized Slither System")
 }
 func (ss *SlitherSystem) Update(dt float32) {
+	sendElongateMsg := false
+	sendChopMsg := false
+	ss.timer -= dt
+	if ss.timer < 0 {
+		ss.Elongate(ss.Player)
+		ss.timer = 1
+		sendElongateMsg = true
+	}
+
+	if engo.Input.Mouse.Action == engo.Press && engo.Input.Mouse.Button == engo.MouseButtonLeft &&
+		len(ss.Player.Body) > 3 {
+		ss.Player.MoveSpeed = 400
+		ss.boost_timer -= dt
+	} else {
+		ss.Player.MoveSpeed = 200
+	}
+
+	if ss.boost_timer < 0 {
+		fmt.Println("Chop time")
+		ss.Chop(ss.Player)
+		ss.boost_timer = 0.5
+		sendChopMsg = true
+	}
+
 	mx, my := GetAdjustedMousePos(false)
 	ss.Player.MoveTowards = engo.Point{mx, my}
 
 	UpdtMsg := "1|"
 	tempx := strconv.FormatFloat(float64(mx), 'f', 2, 32)
 	tempy := strconv.FormatFloat(float64(my), 'f', 2, 32)
-	UpdtMsg += tempx + "|" + tempy
+	UpdtMsg += tempx + "|" + tempy + "|"
+	if sendElongateMsg {
+		UpdtMsg += "true|"
+	} else {
+		UpdtMsg += "false|"
+	}
+	if sendChopMsg {
+		UpdtMsg += "true"
+	} else {
+		UpdtMsg += "false"
+	}
 	WriteToServer(UpdtMsg)
 
 	StringBuffer := ReadFromServer()
@@ -136,6 +173,12 @@ func (ss *SlitherSystem) Update(dt float32) {
 			panic("Error parsing Update Packet")
 		}
 		ss.Slithers[0].MoveTowards = engo.Point{float32(x), float32(y)}
+		if msg[3] == "true" {
+			ss.Elongate(ss.Slithers[0])
+		}
+		if msg[4] == "true" {
+			ss.Chop(ss.Slithers[0])
+		}
 	} else {
 		fmt.Println("msg: ", msg)
 		panic("Expected update packet but did not get it")
@@ -207,6 +250,14 @@ func (ss *SlitherSystem) Elongate(sl *SlitherEntity) {
 	)
 }
 
+func (ss *SlitherSystem) Chop(sl *SlitherEntity) {
+	fmt.Println("Chopping, before", len(sl.Body))
+	ActiveSystems.RenderSys.Remove(sl.Body[len(sl.Body)-1].BasicEntity)
+	sl.ColorCount -= 1
+	sl.Body = sl.Body[:len(sl.Body)-1]
+	fmt.Println("After", len(sl.Body))
+}
+
 func (ss *SlitherSystem) GetShade(BaseCol color.RGBA, Count int) color.RGBA {
 	r, g, b := BaseCol.R, BaseCol.G, BaseCol.B
 	ratio := 0.5 + (math.Abs(float64(10-(Count%20))) / float64(20))
@@ -257,7 +308,7 @@ func GetAlongLine(p1 engo.Point, p2 engo.Point, d float32) engo.Point {
 	x, y := float64(p2.X), float64(p2.Y)
 
 	if X == x && Y == y {
-		panic("p1 and p2 coincide!")
+		return p1
 	}
 
 	var m, n float32

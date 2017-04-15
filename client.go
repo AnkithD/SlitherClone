@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"net"
 	"runtime"
+	"strings"
 
 	"engo.io/ecs"
 	"engo.io/engo"
@@ -56,6 +57,10 @@ func main() {
 	fmt.Print("Enter Server IP (host:port) : ")
 	fmt.Scanln(&ServerAddr)
 	//ServerAddr = "127.0.0.1:7479"
+	if strings.Index(ServerAddr, ":") == -1 {
+		ServerAddr += ":7479"
+	}
+
 	fmt.Println("Trying to connect to Server @", ServerAddr, "...")
 
 	con, err := net.Dial("tcp", ServerAddr)
